@@ -127,9 +127,11 @@ module CDC_FIFO_tb();
         else $display("[%0t] [PASS] FIFO Full boundary flag operates correctly.", $time);
         
         // Attempt an extraneous write while full (verify pointer doesn't smash data)
-        $display("[%0t] Checking Overflow Prevention (Should Ignore 0xFF)", $time);
+        $display("[%0t] Checking Overflow Prevention...", $time);
+        $display("[%0t] Attempting to write 0xFF to a FULL FIFO. This should be ignored.", $time);
         write_byte(8'hFF); 
         @(posedge w_clk);
+        // Proof of no corruption happens in Test 3: If 0xFF overwrote data, the read loop will fail!
 
 
         // Test 3: Burst Read to Empty & Underflow Prevention
@@ -147,8 +149,19 @@ module CDC_FIFO_tb();
         else $display("[%0t] [PASS] FIFO Empty boundary flag operates correctly.", $time);
         
         // Attempt reading while empty
-        $display("[%0t] Checking Underflow Prevention", $time);
-        read_byte('h07); // Output should remain unchanged and pointers should not corrupt
+        $display("[%0t] Checking Underflow Prevention...", $time);
+        $display("[%0t] Attempting an invalid read from an EMPTY FIFO.", $time);
+        r_req = 1;
+        @(posedge r_clk);
+        #1;
+        r_req = 0;
+        
+        // To prove pointers didn't corrupt and skip a slot, write a new value and read it back
+        #(100);
+        $display("[%0t] Writing 'hAA and verifying we retrieve 'hAA properly to confirm pointers are intact...", $time);
+        write_byte(8'hAA);
+        #(100);
+        read_byte(8'hAA);
 
         // Test 4: Concurrent Operations - Fast Write, Slow Read (Wraparound Check)
         $display("\n[%0t] STARTING TEST 4: Concurrent Operations (Fast Write, Slow Read)", $time);
